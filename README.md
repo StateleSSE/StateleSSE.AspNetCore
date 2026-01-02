@@ -1,10 +1,16 @@
 # StateleSSE.AspNetCore
 
-ASP.NET Core extension methods for [StateleSSE](https://github.com/yourusername/StateleSSE). Eliminates boilerplate code when creating Server-Sent Events (SSE) endpoints.
+ASP.NET Core extension methods for the StateleSSE ecosystem. Eliminates boilerplate code when creating Server-Sent Events (SSE) endpoints.
+
+## Installation
+
+```bash
+dotnet add package StateleSSE.AspNetCore
+```
 
 ## What Problem Does This Solve?
 
-When using `StateleSSE.Backplane.Redis`, you typically need to write repetitive boilerplate for each SSE endpoint:
+When using an `ISseBackplane` implementation, you typically need repetitive boilerplate for each SSE endpoint:
 
 ```csharp
 // BEFORE: 27 lines of boilerplate
@@ -52,12 +58,6 @@ public async Task GameStream([FromQuery] string gameId)
 }
 ```
 
-## Installation
-
-```bash
-dotnet add package StateleSSE.AspNetCore
-```
-
 ## Features
 
 ### 1. HttpContext Extension Methods
@@ -70,6 +70,7 @@ Stream events of a specific type without initial state:
 
 ```csharp
 using StateleSSE.AspNetCore;
+using StateleSSE.Abstractions;
 
 [HttpGet("events/player-joined")]
 public async Task StreamPlayerJoined([FromQuery] string gameId)
@@ -150,12 +151,11 @@ var channel4 = ChannelNamingExtensions.BroadcastChannel("weather");
 
 ```csharp
 using StateleSSE.AspNetCore;
+using StateleSSE.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
-public class GameEventsController(
-    StateleSSE.Backplane.Redis.Infrastructure.RedisBackplane backplane)
-    : ControllerBase
+public class GameEventsController(ISseBackplane backplane) : ControllerBase
 {
     // Typed event streaming (no initial state)
     [HttpGet("events/player-joined")]
@@ -201,18 +201,45 @@ public class GameEventsController(
 | `StreamSseWithInitialStateAsync<TState>` | Client needs current state on connect | ✅ Yes | ❌ No |
 | `StreamSseAsync` (untyped) | Multiple event types on one endpoint | ❌ No | ❌ No |
 
+## Backplane Implementations
+
+This library works with any `ISseBackplane` implementation:
+
+```bash
+# Redis backplane (production horizontal scaling)
+dotnet add package StateleSSE.Backplane.Redis
+
+# In-memory backplane (single server, dev/test)
+dotnet add package StateleSSE.Backplane.InMemory
+```
+
+**Registration:**
+
+```csharp
+using StateleSSE.Backplane.Redis.Infrastructure;
+using StackExchange.Redis;
+
+// Redis backplane
+var redis = ConnectionMultiplexer.Connect("localhost:6379");
+builder.Services.AddSingleton<ISseBackplane>(sp =>
+    new RedisBackplane(redis, channelPrefix: "myapp"));
+
+// Or custom backplane
+builder.Services.AddSingleton<ISseBackplane, MyCustomBackplane>();
+```
+
 ## Architecture Recommendations
 
-For **documentation-driven stateless SSE**, use this library with:
+For **stateless documentation-driven SSE**, use this library with:
 
 1. **StateleSSE.CodeGen.TypeScript** - Generates TypeScript EventSource clients from your DTOs
-2. **StateleSSE.Backplane.Redis** - Provides the underlying backplane infrastructure
+2. **StateleSSE.Backplane.Redis** - Provides horizontal scaling via Redis pub/sub
 3. **StateleSSE.AspNetCore** (this library) - Eliminates endpoint boilerplate
 
 ### Recommended Pattern
 
 ```csharp
-// 1. Define your event DTOs with a Type property
+// 1. Define your event DTOs
 public record PlayerJoinedEvent(
     string UserId,
     string UserName,
@@ -224,7 +251,7 @@ public record PlayerJoinedEvent(
 
 // 2. Create typed SSE endpoints with zero boilerplate
 [HttpGet(nameof(PlayerJoinedEvent))]
-[EventSourceEndpoint(typeof(PlayerJoinedEvent))]  // For EventSourceGen
+[EventSourceEndpoint(typeof(PlayerJoinedEvent))]  // For CodeGen
 public async Task StreamPlayerJoined([FromQuery] string gameId)
 {
     var channel = ChannelNamingExtensions.Channel<PlayerJoinedEvent>("game", gameId);
@@ -236,7 +263,53 @@ await backplane.PublishToGroup(
     $"game:{gameId}:PlayerJoinedEvent",
     new PlayerJoinedEvent(userId, userName, playerCount, DateTime.UtcNow)
 );
+
+// 4. Generate TypeScript client (in Program.cs)
+using StateleSSE.CodeGen.TypeScript;
+
+TypeScriptSseGenerator.Generate(
+    openApiSpecPath: "openapi-with-docs.json",
+    outputPath: "../../client/src/generated-sse-client.ts"
+);
 ```
+
+## Extension Method Signatures
+
+```csharp
+public static class SseStreamingExtensions
+{
+    // Typed streaming
+    public static async Task StreamSseAsync<TEvent>(
+        this HttpContext context,
+        ISseBackplane backplane,
+        string channel,
+        CancellationToken cancellationToken = default) where TEvent : class
+
+    // With initial state
+    public static async Task StreamSseWithInitialStateAsync<TState>(
+        this HttpContext context,
+        ISseBackplane backplane,
+        string channel,
+        Func<Task<TState>> getInitialState,
+        string? eventName = null,
+        CancellationToken cancellationToken = default) where TState : class
+
+    // Untyped streaming
+    public static async Task StreamSseAsync(
+        this HttpContext context,
+        ISseBackplane backplane,
+        string channel,
+        CancellationToken cancellationToken = default)
+}
+```
+
+## Related Packages
+
+| Package | Purpose |
+|---------|---------|
+| `StateleSSE.Abstractions` | Core `ISseBackplane` interface |
+| `StateleSSE.Backplane.Redis` | Redis backplane for horizontal scaling |
+| `StateleSSE.CodeGen.TypeScript` | TypeScript EventSource client generation |
 
 ## License
 

@@ -1,28 +1,28 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
-using StateleSSE.Backplane.Redis.Infrastructure;
+using StateleSSE.Abstractions;
 
 namespace StateleSSE.AspNetCore;
 
 /// <summary>
-/// Extension methods for simplifying Server-Sent Events (SSE) streaming with RedisBackplane.
+/// Extension methods for simplifying Server-Sent Events (SSE) streaming with any ISseBackplane implementation.
 /// Eliminates boilerplate for headers, subscription management, and cleanup.
 /// </summary>
 public static class SseStreamingExtensions
 {
     /// <summary>
-    /// Streams Server-Sent Events from a Redis backplane channel to the HTTP response.
+    /// Streams Server-Sent Events from a backplane channel to the HTTP response.
     /// Automatically handles SSE headers, subscription lifecycle, and proper cleanup.
     /// </summary>
     /// <typeparam name="TEvent">The type of events to stream. Must be a class.</typeparam>
     /// <param name="context">The HTTP context.</param>
-    /// <param name="backplane">The Redis backplane to subscribe to.</param>
+    /// <param name="backplane">The SSE backplane implementation to subscribe to.</param>
     /// <param name="channel">The channel name to subscribe to (e.g., "game:123:PlayerJoinedEvent").</param>
     /// <param name="cancellationToken">Optional cancellation token. Defaults to RequestAborted.</param>
     /// <returns>A task that completes when the SSE stream ends.</returns>
     public static async Task StreamSseAsync<TEvent>(
         this HttpContext context,
-        StateleSSE.Backplane.Redis.Infrastructure.RedisBackplane backplane,
+        ISseBackplane backplane,
         string channel,
         CancellationToken cancellationToken = default) where TEvent : class
     {
@@ -58,7 +58,7 @@ public static class SseStreamingExtensions
     /// </summary>
     /// <typeparam name="TState">The type of the initial state. Must be a class.</typeparam>
     /// <param name="context">The HTTP context.</param>
-    /// <param name="backplane">The Redis backplane to subscribe to.</param>
+    /// <param name="backplane">The SSE backplane implementation to subscribe to.</param>
     /// <param name="channel">The channel name to subscribe to.</param>
     /// <param name="getInitialState">Function to retrieve the initial state.</param>
     /// <param name="eventName">Optional event name/type for the initial state message.</param>
@@ -66,7 +66,7 @@ public static class SseStreamingExtensions
     /// <returns>A task that completes when the SSE stream ends.</returns>
     public static async Task StreamSseWithInitialStateAsync<TState>(
         this HttpContext context,
-        StateleSSE.Backplane.Redis.Infrastructure.RedisBackplane backplane,
+        ISseBackplane backplane,
         string channel,
         Func<Task<TState>> getInitialState,
         string? eventName = null,
@@ -106,17 +106,17 @@ public static class SseStreamingExtensions
     }
 
     /// <summary>
-    /// Streams untyped Server-Sent Events from a Redis backplane channel.
+    /// Streams untyped Server-Sent Events from a backplane channel.
     /// All messages are serialized as received without type filtering.
     /// </summary>
     /// <param name="context">The HTTP context.</param>
-    /// <param name="backplane">The Redis backplane to subscribe to.</param>
+    /// <param name="backplane">The SSE backplane implementation to subscribe to.</param>
     /// <param name="channel">The channel name to subscribe to.</param>
     /// <param name="cancellationToken">Optional cancellation token. Defaults to RequestAborted.</param>
     /// <returns>A task that completes when the SSE stream ends.</returns>
     public static async Task StreamSseAsync(
         this HttpContext context,
-        StateleSSE.Backplane.Redis.Infrastructure.RedisBackplane backplane,
+        ISseBackplane backplane,
         string channel,
         CancellationToken cancellationToken = default)
     {
