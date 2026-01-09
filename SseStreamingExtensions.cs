@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
-using StateleSSE.Abstractions;
 
 namespace StateleSSE.AspNetCore;
 

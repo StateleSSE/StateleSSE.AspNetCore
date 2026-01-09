@@ -8,26 +8,35 @@
 
     <!-- NuGet Package Metadata -->
     <PackageId>StateleSSE.AspNetCore</PackageId>
-    <Version>1.0.0</Version>
+    <Version>2.0.0</Version>
     <Authors>Alex</Authors>
-    <Description>ASP.NET Core extension methods for StateleSSE. Eliminates boilerplate for SSE endpoints with fluent APIs for streaming, initial state, and channel management.</Description>
-    <PackageTags>sse;server-sent-events;aspnetcore;extensions;stateless;real-time</PackageTags>
+    <Description>Complete StateleSSE framework for ASP.NET Core: type-safe Server-Sent Events with horizontal scaling support. Includes in-memory backplane, TypeScript client generator, and fluent streaming APIs. Install StateleSSE.Backplane.Redis for production scaling.</Description>
+    <PackageTags>sse;server-sent-events;aspnetcore;extensions;stateless;real-time;typescript;codegen;openapi</PackageTags>
     <RepositoryUrl>https://github.com/StateleSSE/StateleSSE.AspNetCore</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <RootNamespace>StateleSSE.AspNetCore</RootNamespace>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);NSWAG;SWASHBUCKLE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0' OR '$(TargetFramework)' == 'net10.0'">
+    <DefineConstants>$(DefineConstants);MICROSOFT_OPENAPI</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
-  <ItemGroup Condition="Exists('../StateleSSE.Abstractions/StateleSSE.Abstractions.csproj')">
-    <ProjectReference Include="../StateleSSE.Abstractions/StateleSSE.Abstractions.csproj" />
+  <ItemGroup>
+    <PackageReference Include="NSwag.Generation" Version="14.0.0" PrivateAssets="all" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.5.0" PrivateAssets="all" />
   </ItemGroup>
 
-  <ItemGroup Condition="!Exists('../StateleSSE.Abstractions/StateleSSE.Abstractions.csproj')">
-    <PackageReference Include="StateleSSE.Abstractions" Version="1.0.0" />
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0' OR '$(TargetFramework)' == 'net10.0'">
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
