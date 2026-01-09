@@ -12,7 +12,7 @@
     <Authors>Alex</Authors>
     <Description>ASP.NET Core extension methods for StateleSSE. Eliminates boilerplate for SSE endpoints with fluent APIs for streaming, initial state, and channel management.</Description>
     <PackageTags>sse;server-sent-events;aspnetcore;extensions;stateless;real-time</PackageTags>
-    <RepositoryUrl>https://github.com/yourusername/StateleSSE</RepositoryUrl>
+    <RepositoryUrl>https://github.com/StateleSSE/StateleSSE.AspNetCore</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <RootNamespace>StateleSSE.AspNetCore</RootNamespace>
@@ -22,8 +22,12 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="Exists('../StateleSSE.Abstractions/StateleSSE.Abstractions.csproj')">
     <ProjectReference Include="../StateleSSE.Abstractions/StateleSSE.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="!Exists('../StateleSSE.Abstractions/StateleSSE.Abstractions.csproj')">
+    <PackageReference Include="StateleSSE.Abstractions" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
